@@ -16,6 +16,11 @@
     }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    /* 写真なしヘッダーの地模様（コーヒー豆の点描） */
+    .bean-dots {
+      background-image: radial-gradient(rgba(255,255,255,.14) 1.5px, transparent 1.6px);
+      background-size: 14px 14px;
+    }
   </style>
 </head>
 <body class="bg-amber-50/50 text-slate-800 min-h-screen pb-12">
@@ -27,13 +32,13 @@
         <div class="bg-amber-700 text-white p-2 rounded-xl text-lg flex items-center justify-center">
           <i class="fa-solid fa-mug-hot"></i>
         </div>
-        <h1 class="font-bold text-lg text-slate-800 tracking-tight">きょうのカフェ診断</h1>
+        <h1 class="font-bold text-base sm:text-lg text-slate-800 tracking-tight whitespace-nowrap">きょうのカフェ診断</h1>
       </div>
       <div class="flex items-center gap-2">
-        <button id="btn-open-post" onclick="openPost()" class="text-xs font-bold bg-amber-700 hover:bg-amber-800 text-white px-3 py-1.5 rounded-full flex items-center gap-1">
+        <button id="btn-open-post" onclick="openPost()" class="text-xs font-bold bg-amber-700 hover:bg-amber-800 text-white px-3 py-1.5 rounded-full flex items-center gap-1 whitespace-nowrap">
           <i class="fa-solid fa-pen text-[10px]"></i>情報を投稿
         </button>
-        <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">プロトタイプ</span>
+        <span class="hidden sm:inline text-xs font-semibold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full whitespace-nowrap">プロトタイプ</span>
       </div>
     </div>
   </header>
@@ -193,7 +198,7 @@
         plug: true,
         wifi: true,
         tags: ["電源充実", "静かめ", "作業向け"],
-        img: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&q=80",
+        photo: "", // 許可を取って撮った写真のURL。空なら写真なしのヘッダーを出す
         fitReason: "静かな空間と電源環境で作業に集中できます",
         crowdText: "カウンター席中心 / PC作業のお客さまが多め",
         mapUrl: "https://maps.google.com/?q=渋谷+カフェ",
@@ -209,7 +214,7 @@
         plug: false,
         wifi: true,
         tags: ["駅直結", "サクッと利用", "回転早い"],
-        img: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=600&q=80",
+        photo: "", // 許可を取って撮った写真のURL。空なら写真なしのヘッダーを出す
         fitReason: "立地抜群！隙間時間の短時間休憩にピッタリ",
         crowdText: "1人客メイン / テイクアウトや短時間利用が多め",
         mapUrl: "https://maps.google.com/?q=渋谷+コーヒースタンド",
@@ -225,7 +230,7 @@
         plug: false,
         wifi: true,
         tags: ["おしゃれ", "ソファー席あり", "会話弾む"],
-        img: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=600&q=80",
+        photo: "", // 許可を取って撮った写真のURL。空なら写真なしのヘッダーを出す
         fitReason: "開放的な雰囲気で、友達ともデートでも会話が弾む",
         crowdText: "グループ・カップル利用多め / 明るく賑やかな店内",
         mapUrl: "https://maps.google.com/?q=渋谷+ガーデンカフェ",
@@ -241,7 +246,7 @@
         plug: true,
         wifi: true,
         tags: ["超静か", "完全全席電源", "長居OK"],
-        img: "https://images.unsplash.com/photo-1521017432531-fbd92d768814?auto=format&fit=crop&w=600&q=80",
+        photo: "", // 許可を取って撮った写真のURL。空なら写真なしのヘッダーを出す
         fitReason: "図書館のような静けさでじっくり作業可能",
         crowdText: "ほぼ全員が1人客 / 会話のない、とても静かな空間",
         mapUrl: "https://maps.google.com/?q=渋谷+コワーキング",
@@ -257,7 +262,7 @@
         plug: true,
         wifi: true,
         tags: ["大容量席数", "手軽", "広々店内"],
-        img: "https://images.unsplash.com/photo-1453614512568-c4024d13c247?auto=format&fit=crop&w=600&q=80",
+        photo: "", // 許可を取って撮った写真のURL。空なら写真なしのヘッダーを出す
         fitReason: "席数が多くいつでもスッと入れる万能カフェ",
         crowdText: "幅広い客層 / 1人作業から打ち合わせまで多様",
         mapUrl: "https://maps.google.com/?q=渋谷+ロースターズ",
@@ -273,13 +278,68 @@
         plug: true,
         wifi: true,
         tags: ["映えスイーツ", "インテリアこだわり", "人気店"],
-        img: "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?auto=format&fit=crop&w=600&q=80",
+        photo: "", // 許可を取って撮った写真のURL。空なら写真なしのヘッダーを出す
         fitReason: "緑あふれる内装で気分を上げたい時にぴったり",
         crowdText: "女性客・カップル中心 / 落ち着いたおしゃれなBGM",
         mapUrl: "https://maps.google.com/?q=渋谷+ボタニカルカフェ",
         matchScore: { work: 2, quick: 1, chat: 3, short: 1, medium: 3, long: 2, quiet: 2, easy: 1, fancy: 3, date: 3, express: 1, food: 3 }
       }
     ];
+
+    // --- 写真なしヘッダー ---
+    // 店ごとの色（id から決まる）と、一番向いている目的のアイコンで見分けをつける
+    const TONES = [
+      ['#6B4226', '#A0643C'], // エスプレッソ
+      ['#3F5D4A', '#6E8B6B'], // セージ
+      ['#8C5A3C', '#C08552'], // キャラメル
+      ['#4A4E69', '#7A7FA6'], // 夕暮れ
+      ['#7A3E48', '#B5656F'], // ベリー
+      ['#2F5D62', '#5E8B7E']  // ティール
+    ];
+    const USES = [
+      { key: 'work', label: '作業向き', icon: 'fa-laptop' },
+      { key: 'quick', label: 'サクッと向き', icon: 'fa-mug-saucer' },
+      { key: 'chat', label: 'おしゃべり向き', icon: 'fa-comments' },
+      { key: 'date', label: 'デート向き', icon: 'fa-heart' }
+    ];
+
+    const TRAITS = [
+      { key: 'quiet', label: '静か', icon: 'fa-volume-xmark' },
+      { key: 'easy', label: '入りやすい', icon: 'fa-door-open' },
+      { key: 'fancy', label: 'おしゃれ', icon: 'fa-wand-magic-sparkles' },
+      { key: 'food', label: 'フード充実', icon: 'fa-cake-candles' }
+    ];
+
+    function topTrait(cafe) {
+      return TRAITS.reduce((best, t) => (cafe.matchScore[t.key] > cafe.matchScore[best.key] ? t : best), TRAITS[0]);
+    }
+
+    function topUse(cafe) {
+      return USES.reduce((best, u) => (cafe.matchScore[u.key] > cafe.matchScore[best.key] ? u : best), USES[0]);
+    }
+
+    function cafeHeader(cafe, size = 'card') {
+      const [c1, c2] = TONES[(cafe.id - 1) % TONES.length];
+      const use = topUse(cafe);
+      const trait = topTrait(cafe);
+      const h = size === 'card' ? 'h-32' : 'h-24 -mx-6 -mt-6 mb-4 rounded-t-2xl';
+      if (cafe.photo) {
+        return `<div class="relative ${h} bg-slate-100 overflow-hidden"><img src="${cafe.photo}" alt="${cafe.name}" class="w-full h-full object-cover"></div>`;
+      }
+      return `
+        <div class="relative ${h} overflow-hidden text-white" style="background: linear-gradient(135deg, ${c1}, ${c2})">
+          <div class="absolute inset-0 bean-dots"></div>
+          <i class="fa-solid ${use.icon} absolute right-5 bottom-3 text-6xl opacity-20"></i>
+          <div class="absolute left-4 bottom-3 right-24">
+            <div class="flex flex-wrap gap-1.5">
+              ${[use, trait].map(x => `<span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm text-[11px] font-bold px-2.5 py-1 rounded-full"><i class="fa-solid ${x.icon} text-[10px]"></i>${x.label}</span>`).join('')}
+            </div>
+            <div class="flex flex-wrap gap-1 mt-1.5">
+              ${cafe.tags.slice(0, 2).map(t => `<span class="text-[10px] text-white/85">#${t}</span>`).join('')}
+            </div>
+          </div>
+        </div>`;
+    }
 
     // --- State & Persistence ---
     let currentStep = 0;
@@ -452,8 +512,8 @@
         const card = document.createElement('div');
         card.className = "bg-white rounded-2xl overflow-hidden border border-amber-100 shadow-sm hover:shadow-md transition-all";
         card.innerHTML = `
-          <div class="relative h-36 bg-slate-100">
-            <img src="${cafe.img}" alt="${cafe.name}" class="w-full h-full object-cover">
+          <div class="relative">
+            ${cafeHeader(cafe)}
             <div class="absolute top-2 left-2 bg-amber-800/90 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-sm">
               No.${idx + 1}
             </div>
@@ -496,9 +556,10 @@
 
       const mContent = document.getElementById('modal-content');
       mContent.innerHTML = `
-        <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center hover:bg-slate-200">
+        <button onclick="closeModal()" class="absolute top-4 right-4 z-10 w-8 h-8 bg-white/90 text-slate-500 rounded-full flex items-center justify-center hover:bg-slate-200">
           <i class="fa-solid fa-xmark"></i>
         </button>
+        ${cafeHeader(cafe, 'modal')}
         <div class="mb-4">
           <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">店舗詳細</span>
           <h3 class="text-lg font-bold text-slate-800 mt-2">${cafe.name}</h3>

@@ -148,7 +148,7 @@
         tags: ["電源充実", "静かめ", "作業向け"],
         img: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&q=80",
         fitReason: "静かな空間と電源環境で作業に集中できます",
-        crowdText: "カウンター席中心 / 7割がPC作業のお客さま",
+        crowdText: "カウンター席中心 / PC作業のお客さまが多め",
         mapUrl: "https://maps.google.com/?q=渋谷+カフェ",
         matchScore: { work: 3, quick: 1, chat: 1, short: 1, medium: 2, long: 3, quiet: 3, easy: 1, fancy: 2 }
       },
@@ -196,7 +196,7 @@
         tags: ["超静か", "完全全席電源", "長居OK"],
         img: "https://images.unsplash.com/photo-1521017432531-fbd92d768814?auto=format&fit=crop&w=600&q=80",
         fitReason: "図書館のような静けさでじっくり作業可能",
-        crowdText: "ほぼ100%単独利用 / 喋る人がいない非常に静かな空間",
+        crowdText: "ほぼ全員が1人客 / 会話のない、とても静かな空間",
         mapUrl: "https://maps.google.com/?q=渋谷+コワーキング",
         matchScore: { work: 3, quick: 0, chat: 0, short: 0, medium: 2, long: 3, quiet: 3, easy: 1, fancy: 2 }
       },
@@ -352,7 +352,9 @@
         return { ...c, totalScore: score };
       });
 
-      currentSortedCafes = scored;
+      // おすすめ度で上位3件に絞ってから、その3件の中で並び替える
+      scored.sort((a, b) => b.totalScore - a.totalScore || b.rating - a.rating);
+      currentSortedCafes = scored.slice(0, 3);
       sortResults(activeSortType, false);
 
       if (shouldSave) {
@@ -374,15 +376,14 @@
       });
 
       if (type === 'recommend') {
-        currentSortedCafes.sort((a, b) => b.totalScore - a.totalScore);
+        currentSortedCafes.sort((a, b) => b.totalScore - a.totalScore || b.rating - a.rating);
       } else if (type === 'rating') {
         currentSortedCafes.sort((a, b) => b.rating - a.rating);
       } else if (type === 'seats') {
         currentSortedCafes.sort((a, b) => b.totalSeats - a.totalSeats);
       }
 
-      // 上位3件を提示
-      renderCafeCards(currentSortedCafes.slice(0, 3));
+      renderCafeCards(currentSortedCafes);
     }
 
     function renderCafeCards(list) {

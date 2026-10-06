@@ -1,522 +1,392 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>きょうのカフェ診断</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap">
-<style>
-/* Layout: 1カラムのモバイルアプリ。上から質問→結果→ボトムシート詳細。最大幅 480px で中央寄せ */
-:root {
-  --bg: #F2F3EF;          /* 冷たい紙のような下地 */
-  --surface: #FFFFFF;
-  --ink: #1E2421;         /* 本文 */
-  --ink-soft: #5E6862;    /* 補足 */
-  --line: #DCE0DA;
-  --accent: #1F5C4F;      /* 深い緑（焙煎前の豆の色） */
-  --accent-ink: #FFFFFF;
-  --accent-soft: #E1ECE7;
-  --amber: #B66A1F;       /* 評価・ピーク */
-  --scrim: rgba(18, 22, 20, .45);
-  --shadow: 0 1px 2px rgba(20,30,25,.06), 0 8px 24px rgba(20,30,25,.08);
-
-  --font-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Noto Sans JP", sans-serif;
-  --font-body: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
-  --font-data: "DM Mono", ui-monospace, "SFMono-Regular", monospace;
-
-  --r-sm: 10px;
-  --r-md: 16px;
-  --r-lg: 22px;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #141816; --surface: #1D2320; --ink: #E8ECE9; --ink-soft: #9DA8A2; --line: #2F3833;
-    --accent: #6FBFA8; --accent-ink: #0E1A16; --accent-soft: #23352F; --amber: #E3A15A;
-    --scrim: rgba(0,0,0,.6); --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #141816; --surface: #1D2320; --ink: #E8ECE9; --ink-soft: #9DA8A2; --line: #2F3833;
-  --accent: #6FBFA8; --accent-ink: #0E1A16; --accent-soft: #23352F; --amber: #E3A15A;
-  --scrim: rgba(0,0,0,.6); --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
-  color-scheme: dark;
-}
-
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
-html, body { background: var(--bg); color: var(--ink); }
-body { margin: 0; font-family: var(--font-body); font-size: 15px; line-height: 1.7; -webkit-font-smoothing: antialiased; }
-button { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-.app { max-width: 480px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 120px; }
-
-/* Header */
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand svg { flex: none; color: var(--accent); }
-.brand-name { font-family: var(--font-display); font-weight: 900; font-size: 18px; letter-spacing: .02em; }
-.lead { margin: 18px 0 4px; font-family: var(--font-display); font-weight: 700; font-size: 26px; line-height: 1.35; text-wrap: balance; }
-.sub { margin: 0; color: var(--ink-soft); font-size: 13px; }
-
-/* Questions */
-.questions { display: grid; gap: 28px; margin-top: 28px; }
-.q-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
-.q-num { font-family: var(--font-data); font-size: 12px; color: var(--accent); letter-spacing: .08em; }
-.q-title { margin: 0; font-size: 16px; font-weight: 700; }
-.options { display: grid; gap: 8px; }
-.opt {
-  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
-  padding: 12px 14px; border: 1.5px solid var(--line); border-radius: var(--r-md);
-  background: var(--surface); cursor: pointer; transition: border-color .15s, background .15s, transform .1s;
-}
-.opt:active { transform: scale(.985); }
-.opt-icon { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--bg); color: var(--ink-soft); transition: background .15s, color .15s; }
-.opt-text { display: grid; min-width: 0; }
-.opt-label { font-weight: 700; font-size: 15px; line-height: 1.4; }
-.opt-hint { font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
-.opt-check { margin-left: auto; flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; color: transparent; transition: all .15s; }
-.opt[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
-.opt[aria-checked="true"] .opt-icon { background: var(--accent); color: var(--accent-ink); }
-.opt[aria-checked="true"] .opt-check { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-
-/* Bottom action bar */
-.action-bar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(to top, var(--bg) 70%, transparent);
-}
-.action-inner { max-width: 448px; margin: 0 auto; display: grid; gap: 6px; }
-.progress { display: flex; justify-content: center; gap: 6px; }
-.progress span { width: 22px; height: 4px; border-radius: 2px; background: var(--line); transition: background .2s; }
-.progress span.on { background: var(--accent); }
-.btn-primary {
-  width: 100%; padding: 15px; border: 0; border-radius: 999px; cursor: pointer;
-  background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 16px;
-  box-shadow: var(--shadow); transition: opacity .15s, transform .1s;
-}
-.btn-primary:active { transform: scale(.98); }
-.btn-primary:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
-
-/* Results */
-.result-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.btn-ghost { display: inline-flex; align-items: center; gap: 4px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface); cursor: pointer; font-size: 13px; font-weight: 500; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.chip { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 500; }
-.cards { display: grid; gap: 16px; margin-top: 22px; }
-.card {
-  display: block; width: 100%; padding: 0; text-align: left; border: 0; cursor: pointer;
-  background: var(--surface); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow);
-  animation: rise .45s cubic-bezier(.2,.7,.2,1) both;
-  transition: transform .15s;
-}
-.card:active { transform: scale(.985); }
-@keyframes rise { from { transform: translateY(14px); opacity: .001; } to { transform: none; opacity: 1; } }
-.photo { position: relative; aspect-ratio: 16 / 9; max-width: 100%; overflow: hidden; }
-.photo svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.rank { position: absolute; top: 12px; left: 12px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.92); color: #1E2421; font-family: var(--font-data); font-size: 12px; font-weight: 500; }
-.fit { justify-self: start; padding: 4px 10px; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700; line-height: 1.5; }
-.dummy-label { position: absolute; bottom: 8px; right: 12px; font-size: 10px; color: rgba(255,255,255,.75); letter-spacing: .1em; }
-.card-body { padding: 14px 16px 16px; display: grid; gap: 6px; }
-.card-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.card-name { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1.35; min-width: 0; }
-.rating { flex: none; display: inline-flex; align-items: baseline; gap: 4px; color: var(--amber); font-weight: 700; }
-.rating span { font-family: var(--font-data); font-size: 15px; }
-.rating small { color: var(--ink-soft); font-weight: 400; font-size: 11px; font-family: var(--font-data); }
-.meta { font-size: 12px; color: var(--ink-soft); }
-.meta svg { vertical-align: -2px; }
-.pitch { display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--bg); font-size: 13.5px; font-weight: 500; line-height: 1.55; }
-.pitch svg { flex: none; margin-top: 2px; color: var(--accent); }
-.tap-hint { font-size: 12px; color: var(--accent); font-weight: 500; text-align: right; }
-.note { margin-top: 24px; font-size: 11.5px; color: var(--ink-soft); text-align: center; }
-
-/* Modal (bottom sheet) */
-.sheet-wrap { position: fixed; inset: 0; z-index: 20; display: flex; align-items: flex-end; justify-content: center; background: var(--scrim); animation: fade .2s both; }
-@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-.sheet {
-  width: 100%; max-width: 480px; max-height: 88%; overflow-y: auto;
-  background: var(--surface); border-radius: var(--r-lg) var(--r-lg) 0 0;
-  padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px));
-  animation: up .28s cubic-bezier(.2,.8,.2,1) both;
-}
-@keyframes up { from { transform: translateY(40px); } to { transform: none; } }
-@media (min-width: 560px) { .sheet-wrap { align-items: center; } .sheet { border-radius: var(--r-lg); } }
-.grabber { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 12px; }
-.sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.sheet-title { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 22px; line-height: 1.35; }
-.btn-close { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--bg); cursor: pointer; display: grid; place-items: center; }
-.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
-.fact { padding: 12px; border-radius: var(--r-md); background: var(--bg); display: grid; gap: 2px; }
-.fact-label { font-size: 11px; color: var(--ink-soft); letter-spacing: .06em; display: flex; align-items: center; gap: 6px; }
-.fact-value { font-weight: 700; font-size: 15px; }
-.fact-sub { font-size: 11.5px; color: var(--ink-soft); line-height: 1.4; }
-.fact.wide { grid-column: 1 / -1; }
-.ok { color: var(--accent); }
-.ng { color: var(--ink-soft); }
-.section-label { margin: 18px 0 8px; font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.section-label span { font-weight: 400; color: var(--amber); font-size: 12px; }
-.crowd { display: grid; grid-template-columns: repeat(13, 1fr); align-items: end; gap: 4px; height: 76px; }
-.crowd i { display: block; border-radius: 4px 4px 2px 2px; background: var(--accent-soft); min-height: 4px; }
-.crowd i.peak { background: var(--amber); }
-.crowd-axis { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; margin-top: 4px; font-family: var(--font-data); font-size: 10px; color: var(--ink-soft); text-align: center; font-variant-numeric: tabular-nums; }
-.tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.tag { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-soft); }
-.btn-map {
-  margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; padding: 14px; border-radius: 999px; text-decoration: none;
-  background: var(--accent); color: var(--accent-ink); font-weight: 700;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>きょうのカフェ診断</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+    body { font-family: 'Noto Sans JP', sans-serif; }
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
-<body>
+<body class="bg-amber-50/50 text-slate-800 min-h-screen pb-12">
 
-<div class="app">
-  <header class="brand">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9z"/><path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16"/><path d="M8 3.5c0 1.2 1 1.3 1 2.5M12 3.5c0 1.2 1 1.3 1 2.5"/></svg>
-    <span class="brand-name">きょうのカフェ診断</span>
+  <!-- Header -->
+  <header class="bg-white border-b border-amber-100 sticky top-0 z-10 shadow-sm">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="bg-amber-700 text-white p-2 rounded-xl text-lg flex items-center justify-center">
+          <i class="fa-solid me-1 fa-mug-hot"></i>
+        </div>
+        <h1 class="font-bold text-lg text-slate-800 tracking-tight">きょうのカフェ診断</h1>
+      </div>
+      <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">プロトタイプ</span>
+    </div>
   </header>
 
-  <!-- STEP 1: 診断フォーム -->
-  <main id="step-form">
-    <h1 class="lead">3つ選ぶだけで、<br>今日の気分に合う店へ。</h1>
-    <p class="sub">口コミを読み比べなくて大丈夫。30秒で3軒に絞ります。</p>
-    <div class="questions" id="questions"></div>
+  <main class="max-w-md mx-auto px-4 mt-4">
+
+    <!-- Step Indicator -->
+    <div id="step-indicator" class="flex justify-between items-center mb-6 px-2">
+      <div class="flex items-center gap-1.5">
+        <span id="dot-1" class="w-3 h-3 rounded-full bg-amber-600 transition-all"></span>
+        <span id="dot-2" class="w-3 h-3 rounded-full bg-slate-200 transition-all"></span>
+        <span id="dot-3" class="w-3 h-3 rounded-full bg-slate-200 transition-all"></span>
+      </div>
+      <span id="step-text" class="text-xs font-medium text-slate-500">質問 1 / 3</span>
+    </div>
+
+    <!-- Question View -->
+    <div id="question-container" class="bg-white rounded-2xl p-6 shadow-sm border border-amber-100/60 fade-in">
+      <h2 id="question-title" class="text-lg font-bold text-slate-800 mb-1">今どんな目的で使いたい？</h2>
+      <p id="question-sub" class="text-xs text-slate-500 mb-6">直感で1つ選んでね</p>
+
+      <div id="options-grid" class="grid gap-3">
+        <!-- Options rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Result View (Hidden initially) -->
+    <div id="result-container" class="hidden fade-in">
+
+      <!-- Top banner -->
+      <div class="bg-gradient-to-r from-amber-800 to-amber-700 text-white rounded-2xl p-5 mb-4 shadow-md">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-medium bg-white/20 px-2.5 py-0.5 rounded-full text-amber-50">診断結果</span>
+          <button onclick="resetQuiz()" class="text-xs text-amber-100 underline hover:text-white flex items-center gap-1">
+            <i class="fa-solid fa-rotate-left"></i>やり直す
+          </button>
+        </div>
+        <h2 id="result-headline" class="text-lg font-bold mt-1">あなたにぴったりなおすすめカフェ</h2>
+        <p id="result-sub" class="text-xs text-amber-100 mt-1">選択条件に基づいたベスト3</p>
+      </div>
+
+      <!-- Sort Buttons -->
+      <div class="flex items-center justify-between mb-3 bg-white p-1.5 rounded-xl border border-amber-100 text-xs">
+        <span class="text-slate-500 pl-2 font-medium">並び替え:</span>
+        <div class="flex gap-1">
+          <button id="sort-recommend" onclick="sortResults('recommend')" class="px-2.5 py-1 rounded-lg font-medium bg-amber-100 text-amber-900 transition-all">おすすめ順</button>
+          <button id="sort-rating" onclick="sortResults('rating')" class="px-2.5 py-1 rounded-lg font-medium text-slate-600 hover:bg-slate-100 transition-all">評価が高い順</button>
+          <button id="sort-seats" onclick="sortResults('seats')" class="px-2.5 py-1 rounded-lg font-medium text-slate-600 hover:bg-slate-100 transition-all">席数が多い順</button>
+        </div>
+      </div>
+
+      <!-- Cafe List -->
+      <div id="cafe-list" class="grid gap-4">
+        <!-- Cafe cards rendered dynamically -->
+      </div>
+
+      <div class="mt-6 text-center text-xs text-slate-400">
+        <p>※ 店舗データ・写真はプロトタイプ用のサンプルです</p>
+      </div>
+    </div>
+
   </main>
 
-  <!-- STEP 2: 結果一覧 -->
-  <section id="step-result" hidden aria-live="polite">
-    <div class="result-top" style="margin-top:20px">
-      <h1 class="lead" style="margin:0;font-size:22px">あなたへの3軒</h1>
-      <button class="btn-ghost" id="btn-back" type="button">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>条件を変える
-      </button>
+  <!-- Modal -->
+  <div id="modal" class="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+    <div id="modal-content" class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto p-6 relative fade-in">
+      <!-- Modal contents dynamically filled -->
     </div>
-    <div class="chips" id="chips"></div>
-    <div class="cards" id="cards"></div>
-    <p class="note">※ 店舗・評価・写真はすべてプロトタイプ用のダミーデータです</p>
-  </section>
-</div>
-
-<div class="action-bar" id="action-bar">
-  <div class="action-inner">
-    <div class="progress" id="progress" aria-hidden="true"><span></span><span></span><span></span></div>
-    <button class="btn-primary" id="btn-search" type="button" disabled>あと3つ選んでください</button>
   </div>
-</div>
 
-<!-- STEP 3: 詳細モーダル -->
-<div class="sheet-wrap" id="modal" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title" id="sheet"></div>
-</div>
+  <script>
+    // --- Master Data ---
+    const questions = [
+      {
+        id: "purpose",
+        title: "今どんな目的で使いたい？",
+        sub: "メインの用途を選んでね",
+        options: [
+          { label: "パソコン作業・勉強", icon: "fa-laptop", value: "work" },
+          { label: "サクッと1人でお茶・休憩", icon: "fa-mug-saucer", value: "quick" },
+          { label: "友達とおしゃべり・談笑", icon: "fa-comments", value: "chat" }
+        ]
+      },
+      {
+        id: "time",
+        title: "滞在時間の予定は？",
+        sub: "およその目安でOK",
+        options: [
+          { label: "30分〜1時間未満", icon: "fa-bolt", value: "short" },
+          { label: "1〜2時間程度", icon: "fa-clock", value: "medium" },
+          { label: "2時間以上じっくり", icon: "fa-hourglass-half", value: "long" }
+        ]
+      },
+      {
+        id: "atmosphere",
+        title: "重視したいこだわりは？",
+        sub: "一番譲れないポイント",
+        options: [
+          { label: "静かさ・集中しやすさ", icon: "fa-volume-xmark", value: "quiet" },
+          { label: "入りやすさ・手軽さ", icon: "fa-door-open", value: "easy" },
+          { label: "おしゃれさ・雰囲気の良さ", icon: "fa-sparkles", value: "fancy" }
+        ]
+      }
+    ];
 
-<script>
-/* ---------- アイコン ---------- */
-const ICON = {
-  laptop: '<path d="M4 6h16v10H4z"/><path d="M2 19h20"/>',
-  bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>',
-  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
-  moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/>',
-  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2a5 5 0 0 1 5.5 5"/>',
-  sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
-  bean: '<ellipse cx="12" cy="12" rx="6.5" ry="9" transform="rotate(30 12 12)"/><path d="M8.5 18c2-3 1-6 3.5-9s3-3 3.5-3.5"/>',
-  cake: '<path d="M4 20h16v-7H4z"/><path d="M4 16c2 1.5 4-1 6 0s4 1.5 6 0 3-.5 4 0"/><path d="M12 13V9"/><path d="M12 6.5c.8-.8.8-1.7 0-2.5-.8.8-.8 1.7 0 2.5z"/>',
-  bread: '<path d="M5 11a4 4 0 0 1 2-7.5h10A4 4 0 0 1 19 11v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/>',
-  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
-  plug: '<path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/>',
-  wifi: '<path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r=".8" fill="currentColor"/>',
-  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
-  close: '<path d="M6 6l12 12M18 6L6 18"/>',
-  star: '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z" fill="currentColor" stroke="none"/>',
-};
-const icon = (name, size = 20, sw = 1.8) =>
-  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name]}</svg>`;
+    const cafes = [
+      {
+        id: 1,
+        name: "カフェ・ド・クリエ 渋谷南口店",
+        area: "渋谷駅 徒歩3分",
+        rating: 4.2,
+        totalSeats: 65,
+        seatsDetail: "カウンター25席 / テーブル40席",
+        plug: true,
+        wifi: true,
+        tags: ["電源あり", "一人利用多め", "作業向け"],
+        img: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&q=80",
+        fitReason: "作業重視のあなたに『電源・静かさ』が最適",
+        crowdText: "カウンター席中心 / 8割以上が1人客",
+        mapUrl: "https://maps.google.com/?q=カフェドクリエ渋谷",
+        matchScore: { work: 3, quick: 2, chat: 1, quiet: 3, easy: 2, fancy: 1 }
+      },
+      {
+        id: 2,
+        name: "スターバックス 渋谷マークシティ店",
+        area: "渋谷駅直結 徒歩2分",
+        rating: 4.5,
+        totalSeats: 82,
+        seatsDetail: "カウンター20席 / テーブル62席",
+        plug: true,
+        wifi: true,
+        tags: ["駅直結", "明るい店内", "おしゃべりOK"],
+        img: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=600&q=80",
+        fitReason: "短時間の立ち寄りに『立地の良さと解放感』が最高",
+        crowdText: "テーブル席中心 / 2人組や仕事利用が多め",
+        mapUrl: "https://maps.google.com/?q=スターバックス渋谷マークシティ",
+        matchScore: { work: 2, quick: 3, chat: 3, quiet: 1, easy: 3, fancy: 3 }
+      },
+      {
+        id: 3,
+        name: "サンマルクカフェ 渋谷井の頭通り店",
+        area: "渋谷駅 徒歩4分",
+        rating: 4.0,
+        totalSeats: 90,
+        seatsDetail: "カウンター30席 / テーブル60席",
+        plug: false,
+        wifi: true,
+        tags: ["コスパ良し", "サクッと寄りやすい", "席数多め"],
+        img: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=600&q=80",
+        fitReason: "気兼ねなくサクッと入れてリーズナブル",
+        crowdText: "広めの店内 / 1人客・複数人問わず入りやすい",
+        mapUrl: "https://maps.google.com/?q=サンマルクカフェ渋谷",
+        matchScore: { work: 1, quick: 3, chat: 2, quiet: 2, easy: 3, fancy: 1 }
+      }
+    ];
 
-/* ---------- 質問定義 ---------- */
-const QUESTIONS = [
-  { key: 'purpose', title: '今日はどう過ごしたい？', options: [
-    { value: 'work',  label: 'ガッツリ作業',     hint: 'PC・勉強で2時間以上いたい', icon: 'laptop' },
-    { value: 'quick', label: '1人でサクッと',     hint: '30分〜1時間ほどひと息つきたい', icon: 'bolt' },
-    { value: 'chat',  label: '友人とおしゃべり', hint: '気兼ねなく話せるところがいい', icon: 'chat' },
-  ]},
-  { key: 'vibe', title: 'どんな雰囲気がいい？', options: [
-    { value: 'quiet',  label: 'お一人様多め・静か',       hint: '会話より作業や読書の音', icon: 'moon' },
-    { value: 'lively', label: '男女半々・ほどよく賑やか', hint: '話し声があるほうが落ち着く', icon: 'users' },
-    { value: 'stylish',label: 'おしゃれ・カップル多め',   hint: '内装や器にこだわりたい', icon: 'sparkle' },
-  ]},
-  { key: 'drink', title: '何を飲みたい・食べたい？', options: [
-    { value: 'coffee', label: 'コーヒー',         hint: 'ハンドドリップ・浅煎りなど', icon: 'bean' },
-    { value: 'sweet',  label: 'スイーツ・ラテ',   hint: '甘いものと一緒にゆっくり', icon: 'cake' },
-    { value: 'food',   label: 'サクッと軽食',     hint: 'トースト・サンドで小腹を満たす', icon: 'bread' },
-  ]},
-];
+    // --- State ---
+    let currentStep = 0;
+    let answers = {};
+    let currentSortedCafes = [];
 
-/* ---------- モックデータ（8件） ----------
-   score: 各選択肢との相性 0〜3 / crowd: 8時〜20時の混雑度 0〜100 */
-const CAFES = [
-  { id: 1, name: '灯台珈琲 神保町', area: '神保町', walk: 3, rating: 4.5, reviews: 312, price: '¥600〜', hue: 160,
-    crowdText: 'カウンター席中心 / 8割以上が1人客', outlet: '全席', wifi: true, wifiNote: '高速・パスワード制',
-    crowd: [10,20,35,50,55,70,60,50,55,60,45,30,20], peak: '平日 13〜14時',
-    tags: ['長居OK', '1人席多め', '古本屋街', '深煎り'],
-    score: { work:3, quick:2, chat:0, quiet:3, lively:0, stylish:1, coffee:3, sweet:1, food:1 },
-    pitch: { work: '1人客が大半・全席コンセント付きで作業に最適', quick: 'カウンター席が多く、1杯だけでも入りやすい', chat: '静かな店内なので、小声での会話向き' },
-    fit: { work: '電源・静かさ', quick: 'カウンター席', chat: '落ち着いた空気' } },
-  { id: 2, name: 'Pomme Latte Stand', area: '表参道', walk: 5, rating: 4.3, reviews: 528, price: '¥800〜', hue: 12,
-    crowdText: 'テラス・2人席中心 / カップル客が多め', outlet: 'なし', wifi: false, wifiNote: '',
-    crowd: [5,10,25,45,60,80,90,95,85,70,50,35,20], peak: '土日 14〜16時',
-    tags: ['アップルパイ', 'テラス席', '写真映え'],
-    score: { work:0, quick:2, chat:2, quiet:0, lively:2, stylish:3, coffee:1, sweet:3, food:1 },
-    pitch: { work: '作業には不向き。気分転換の休憩に', quick: 'テイクアウト窓口あり。焼きたてアップルパイを片手に', chat: '季節のラテとパイで会話が弾む、カップル客も多い一軒' },
-    fit: { work: '気分転換', quick: 'テイクアウト', chat: 'ラテとパイ' } },
-  { id: 3, name: 'ことり舎', area: '吉祥寺', walk: 7, rating: 4.4, reviews: 241, price: '¥900〜', hue: 42,
-    crowdText: 'ソファ席中心 / 友人グループが多め', outlet: '一部', wifi: true, wifiNote: '無料',
-    crowd: [0,5,15,40,70,85,90,80,70,55,40,25,10], peak: '土日 13〜15時',
-    tags: ['ソファ席', '季節のパフェ', 'グループ歓迎'],
-    score: { work:1, quick:0, chat:3, quiet:0, lively:3, stylish:2, coffee:1, sweet:3, food:2 },
-    pitch: { work: 'ソファ席中心。軽い作業ならOK', quick: '混雑時は待ちが出やすいので時間に余裕を', chat: 'ソファ席で4人までゆったり。会話を気にしなくていい賑わい' },
-    fit: { work: 'ソファ席', quick: '季節のパフェ', chat: 'ソファ席・賑わい' } },
-  { id: 4, name: 'STUDY BEANS 渋谷', area: '渋谷', walk: 4, rating: 4.1, reviews: 405, price: '¥500〜', hue: 205,
-    crowdText: '仕切り付きブース中心 / 大半が1人客', outlet: '全席', wifi: true, wifiNote: '高速・時間無制限',
-    crowd: [30,45,55,65,75,80,70,65,70,80,85,70,50], peak: '平日 18〜19時',
-    tags: ['集中ブース', 'おかわり半額', '朝8時から'],
-    score: { work:3, quick:1, chat:0, quiet:3, lively:1, stylish:0, coffee:2, sweet:0, food:2 },
-    pitch: { work: '仕切り付き集中ブースで、3時間いても周りが気にならない', quick: '朝8時から営業。出社前の1杯にも', chat: '会話は控えめが暗黙のルール' },
-    fit: { work: '集中ブース・電源', quick: '朝8時オープン', chat: '静かな環境' } },
-  { id: 5, name: '朝凪ベーカリーカフェ', area: '中目黒', walk: 2, rating: 4.2, reviews: 189, price: '¥700〜', hue: 30,
-    crowdText: 'テーブル・窓際席 / 1人客とペアが半々', outlet: '一部', wifi: true, wifiNote: '無料',
-    crowd: [60,75,70,50,40,65,55,40,35,30,25,10,5], peak: '毎日 8〜10時',
-    tags: ['焼きたてパン', 'モーニング', '目黒川沿い'],
-    score: { work:1, quick:3, chat:2, quiet:1, lively:2, stylish:2, coffee:2, sweet:1, food:3 },
-    pitch: { work: '昼過ぎは空くので短時間の作業なら', quick: '駅2分。焼きたてクロワッサンとコーヒーで20分の朝ごはん', chat: '川沿いの窓席でブランチがてらおしゃべり' },
-    fit: { work: '昼過ぎの空き具合', quick: '駅近・焼きたてパン', chat: '川沿いの窓席' } },
-  { id: 6, name: '喫茶 ひだまり', area: '下北沢', walk: 6, rating: 4.6, reviews: 276, price: '¥650〜', hue: 352,
-    crowdText: 'カウンター＋テーブル / 2〜3人連れが中心', outlet: 'なし', wifi: false, wifiNote: '',
-    crowd: [0,10,20,35,55,75,85,80,65,50,40,30,15], peak: '土日 14〜16時',
-    tags: ['固めプリン', '昭和レトロ', 'クリームソーダ'],
-    score: { work:0, quick:1, chat:3, quiet:1, lively:3, stylish:1, coffee:2, sweet:3, food:1 },
-    pitch: { work: '電源なし。読書向き', quick: 'カウンターでプリンとブレンドを一気に', chat: '男女半々のほどよい賑わい。固めプリンをつつきながら長話' },
-    fit: { work: '読書向きの空気', quick: 'プリンとブレンド', chat: 'レトロな賑わい' } },
-  { id: 7, name: 'Northside Roasters', area: '蔵前', walk: 5, rating: 4.7, reviews: 158, price: '¥550〜', hue: 190,
-    crowdText: 'スタンド・カウンター中心 / 1人客が多め', outlet: '一部', wifi: true, wifiNote: '無料',
-    crowd: [15,25,40,45,50,60,55,45,40,35,25,15,5], peak: '土日 12〜14時',
-    tags: ['自家焙煎', '浅煎り', 'スタンド席'],
-    score: { work:2, quick:3, chat:1, quiet:2, lively:1, stylish:3, coffee:3, sweet:1, food:0 },
-    pitch: { work: '窓際のカウンター席に電源あり。1〜2時間の作業に', quick: '1人客が多いスタンド。焙煎所併設、浅煎りの一杯をサッと', chat: 'スタンド中心なので、立ち話くらいの軽さで' },
-    fit: { work: '窓際の電源席', quick: '浅煎りスタンド', chat: '気軽な立ち話' } },
-  { id: 8, name: 'Cafe Lumen', area: '代官山', walk: 4, rating: 4.4, reviews: 367, price: '¥1,000〜', hue: 268,
-    crowdText: '2人席中心 / カップル・友人連れが中心', outlet: '一部', wifi: true, wifiNote: '無料',
-    crowd: [0,5,20,50,75,85,95,90,80,65,55,40,25], peak: '土日 14〜17時',
-    tags: ['吹き抜け', 'デート向き', 'フレンチトースト'],
-    score: { work:1, quick:0, chat:3, quiet:1, lively:2, stylish:3, coffee:1, sweet:3, food:2 },
-    pitch: { work: '平日午前なら静か。窓際のみ電源あり', quick: '人気店なので平日の開店直後が狙い目', chat: '吹き抜けの明るい店内。フレンチトーストを分け合いながら' },
-    fit: { work: '平日午前の静けさ', quick: '開店直後の空き', chat: '吹き抜けの明るさ' } },
-];
+    // --- DOM Elements ---
+    const qContainer = document.getElementById('question-container');
+    const rContainer = document.getElementById('result-container');
+    const qTitle = document.getElementById('question-title');
+    const qSub = document.getElementById('question-sub');
+    const optionsGrid = document.getElementById('options-grid');
+    const stepText = document.getElementById('step-text');
+    const cafeList = document.getElementById('cafe-list');
+    const modal = document.getElementById('modal');
 
-/* ---------- 状態 ---------- */
-const state = { purpose: null, vibe: null, drink: null };
-const $ = (id) => document.getElementById(id);
+    // --- Init ---
+    renderQuestion();
 
-/* ---------- STEP 1: フォーム描画 ---------- */
-function renderQuestions() {
-  $('questions').innerHTML = QUESTIONS.map((q, qi) => `
-    <section>
-      <div class="q-head"><span class="q-num">Q${qi + 1}/3</span><h2 class="q-title" id="q-${q.key}">${q.title}</h2></div>
-      <div class="options" role="radiogroup" aria-labelledby="q-${q.key}">
-        ${q.options.map(o => `
-          <button type="button" class="opt" role="radio" id="opt-${q.key}-${o.value}"
-            data-key="${q.key}" data-value="${o.value}" aria-checked="${state[q.key] === o.value}">
-            <span class="opt-icon">${icon(o.icon, 22)}</span>
-            <span class="opt-text"><span class="opt-label">${o.label}</span><span class="opt-hint">${o.hint}</span></span>
-            <span class="opt-check">${icon('check', 14, 3)}</span>
-          </button>`).join('')}
-      </div>
-    </section>`).join('');
-}
+    function renderQuestion() {
+      const q = questions[currentStep];
+      qTitle.textContent = q.title;
+      qSub.textContent = q.sub;
+      stepText.textContent = `質問 ${currentStep + 1} / 3`;
 
-function updateForm() {
-  document.querySelectorAll('.opt').forEach(el => {
-    el.setAttribute('aria-checked', state[el.dataset.key] === el.dataset.value);
-  });
-  const done = Object.values(state).filter(Boolean).length;
-  [...$('progress').children].forEach((s, i) => s.classList.toggle('on', i < done));
-  const btn = $('btn-search');
-  btn.disabled = done < 3;
-  btn.textContent = done < 3 ? `あと${3 - done}つ選んでください` : 'おすすめカフェを探す';
-}
+      // Update Dots
+      for (let i = 1; i <= 3; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        if (i <= currentStep + 1) {
+          dot.className = "w-3 h-3 rounded-full bg-amber-600 transition-all";
+        } else {
+          dot.className = "w-3 h-3 rounded-full bg-slate-200 transition-all";
+        }
+      }
 
-$('questions').addEventListener('click', (e) => {
-  const opt = e.target.closest('.opt');
-  if (!opt) return;
-  const { key, value } = opt.dataset;
-  state[key] = value;
-  updateForm();
-  // 次の未回答の質問へ自動スクロール（数タップで完結させる）
-  const idx = QUESTIONS.findIndex(q => q.key === key);
-  const next = QUESTIONS.slice(idx + 1).find(q => !state[q.key]);
-  if (next) $('q-' + next.key).scrollIntoView({ behavior: 'smooth', block: 'center' });
-});
+      optionsGrid.innerHTML = '';
+      q.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = "w-full bg-amber-50/40 hover:bg-amber-100/60 border border-amber-200/60 text-slate-800 font-medium py-4 px-5 rounded-xl flex items-center justify-between text-left transition-all active:scale-[0.99]";
+        btn.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center text-sm">
+              <i class="fa-solid ${opt.icon}"></i>
+            </div>
+            <span class="text-sm font-bold text-slate-700">${opt.label}</span>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+        `;
+        btn.onclick = () => selectOption(q.id, opt.value);
+        optionsGrid.appendChild(btn);
+      });
+    }
 
-/* ---------- マッチングロジック ----------
-   目的を最重視（×3）、雰囲気（×2）、飲み物（×1.5）で加重スコア → 上位3件
-   スコアは並び替えにだけ使い、画面には数値ではなく言葉（fitLine）で理由を出す */
-const WEIGHT = { purpose: 3, vibe: 2, drink: 1.5 };
+    function selectOption(qId, val) {
+      answers[qId] = val;
+      if (currentStep < questions.length - 1) {
+        currentStep++;
+        qContainer.classList.remove('fade-in');
+        void qContainer.offsetWidth; // trigger reflow
+        qContainer.classList.add('fade-in');
+        renderQuestion();
+      } else {
+        showResults();
+      }
+    }
 
-function recommend(s) {
-  return CAFES
-    .map(c => {
-      const total = c.score[s.purpose] * WEIGHT.purpose + c.score[s.vibe] * WEIGHT.vibe + c.score[s.drink] * WEIGHT.drink;
-      return { ...c, total };
-    })
-    .sort((a, b) => b.total - a.total || b.rating - a.rating)
-    .slice(0, 3);
-}
+    function showResults() {
+      document.getElementById('step-indicator').classList.add('hidden');
+      qContainer.classList.add('hidden');
+      rContainer.classList.remove('hidden');
 
-/* 「なぜこの店か」を一言で。目的との相性の強さで言い回しを変える */
-const FIT_PREFIX = { work: '作業重視のあなたに', quick: 'サクッと派のあなたに', chat: 'おしゃべり派のあなたに' };
-function fitLine(c, s) {
-  const word = c.fit[s.purpose];
-  const level = c.score[s.purpose];
-  if (level >= 3) return `${FIT_PREFIX[s.purpose]}『${word}』が最適`;
-  if (level === 2) return `${FIT_PREFIX[s.purpose]}『${word}』がちょうどいい`;
-  return `雰囲気で選ぶなら『${word}』が魅力`;
-}
+      // Calculate score
+      const scored = cafes.map(c => {
+        let score = 0;
+        if (answers.purpose && c.matchScore[answers.purpose]) score += c.matchScore[answers.purpose];
+        if (answers.atmosphere && c.matchScore[answers.atmosphere]) score += c.matchScore[answers.atmosphere];
+        return { ...c, totalScore: score };
+      });
 
-/* ---------- 写真ダミー（店ごとに色相を変えたイラスト） ---------- */
-function photo(c) {
-  const h = c.hue;
-  return `<svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <defs><linearGradient id="g${c.id}" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="hsl(${h} 38% 72%)"/><stop offset="1" stop-color="hsl(${(h + 25) % 360} 30% 44%)"/>
-    </linearGradient></defs>
-    <rect width="320" height="180" fill="url(#g${c.id})"/>
-    <rect x="0" y="122" width="320" height="58" fill="hsl(${h} 25% 30% / .35)"/>
-    <rect x="210" y="30" width="70" height="70" rx="6" fill="hsl(${h} 60% 92% / .35)"/>
-    <line x1="245" y1="30" x2="245" y2="100" stroke="hsl(${h} 40% 30% / .3)" stroke-width="3"/>
-    <line x1="210" y1="65" x2="280" y2="65" stroke="hsl(${h} 40% 30% / .3)" stroke-width="3"/>
-    <ellipse cx="120" cy="124" rx="56" ry="9" fill="hsl(${h} 30% 20% / .25)"/>
-    <path d="M86 84h64v22a28 28 0 0 1-28 28h-8a28 28 0 0 1-28-28z" fill="#FBFAF7"/>
-    <path d="M150 90h7a12 12 0 0 1 0 24h-9" fill="none" stroke="#FBFAF7" stroke-width="6"/>
-    <ellipse cx="118" cy="85" rx="31" ry="5" fill="hsl(28 45% 32%)"/>
-    <path d="M106 70c0-7 7-7 7-14M122 70c0-7 7-7 7-14" fill="none" stroke="#FBFAF7" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/>
-  </svg>`;
-}
+      // Initial sort by recommendation score
+      scored.sort((a, b) => b.totalScore - a.totalScore);
+      currentSortedCafes = scored;
 
-/* ---------- STEP 2: 結果描画 ---------- */
-const labelOf = (key) => QUESTIONS.find(q => q.key === key).options.find(o => o.value === state[key]).label;
-let current = [];
+      renderCafeCards(currentSortedCafes);
+    }
 
-function showResults() {
-  current = recommend(state);
-  $('chips').innerHTML = QUESTIONS.map(q => `<span class="chip">${labelOf(q.key)}</span>`).join('');
-  $('cards').innerHTML = current.map((c, i) => `
-    <button type="button" class="card" data-id="${c.id}" style="animation-delay:${i * 90}ms" aria-label="${c.name}の詳細を見る">
-      <div class="photo">${photo(c)}
-        <span class="rank">No.${i + 1}</span>
-        <span class="dummy-label">PHOTO DUMMY</span>
-      </div>
-      <div class="card-body">
-        <span class="fit">${fitLine(c, state)}</span>
-        <div class="card-row">
-          <h2 class="card-name">${c.name}</h2>
-          <span class="rating">${icon('star', 15)}<span>${c.rating.toFixed(1)}</span><small>(${c.reviews})</small></span>
+    function sortResults(type) {
+      // Update Tab Styles
+      ['recommend', 'rating', 'seats'].forEach(t => {
+        const btn = document.getElementById(`sort-${t}`);
+        if (t === type) {
+          btn.className = "px-2.5 py-1 rounded-lg font-medium bg-amber-100 text-amber-900 transition-all";
+        } else {
+          btn.className = "px-2.5 py-1 rounded-lg font-medium text-slate-600 hover:bg-slate-100 transition-all";
+        }
+      });
+
+      if (type === 'recommend') {
+        currentSortedCafes.sort((a, b) => b.totalScore - a.totalScore);
+      } else if (type === 'rating') {
+        currentSortedCafes.sort((a, b) => b.rating - a.rating);
+      } else if (type === 'seats') {
+        currentSortedCafes.sort((a, b) => b.totalSeats - a.totalSeats);
+      }
+
+      renderCafeCards(currentSortedCafes);
+    }
+
+    function renderCafeCards(list) {
+      cafeList.innerHTML = '';
+      list.forEach((cafe, idx) => {
+        const card = document.createElement('div');
+        card.className = "bg-white rounded-2xl overflow-hidden border border-amber-100 shadow-sm hover:shadow-md transition-all";
+        card.innerHTML = `
+          <div class="relative h-36 bg-slate-100">
+            <img src="${cafe.img}" alt="${cafe.name}" class="w-full h-full object-cover">
+            <div class="absolute top-2 left-2 bg-amber-800/90 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-sm">
+              No.${idx + 1}
+            </div>
+            <div class="absolute top-2 right-2 bg-white/90 text-amber-800 text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 backdrop-blur-sm">
+              <i class="fa-solid fa-star text-amber-500 text-[10px]"></i> ${cafe.rating}
+            </div>
+          </div>
+          <div class="p-4">
+            <div class="mb-2">
+              <span class="inline-block bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold px-2 py-0.5 rounded-md mb-1.5">
+                <i class="fa-solid fa-thumbs-up text-[10px] me-1"></i>${cafe.fitReason}
+              </span>
+              <h3 class="font-bold text-slate-800 text-base leading-snug">${cafe.name}</h3>
+              <p class="text-xs text-slate-500 mt-0.5"><i class="fa-solid fa-location-dot me-1 text-slate-400"></i>${cafe.area}</p>
+            </div>
+
+            <!-- Seat & Facility Info -->
+            <div class="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 p-2 rounded-lg my-2">
+              <span><i class="fa-solid fa-chair text-slate-400 me-1"></i>席数: <strong>${cafe.totalSeats}席</strong></span>
+              <span><i class="fa-solid fa-plug text-slate-400 me-1"></i>電源: ${cafe.plug ? 'あり' : 'なし'}</span>
+              <span><i class="fa-solid fa-wifi text-slate-400 me-1"></i>Wi-Fi: ${cafe.wifi ? 'あり' : 'なし'}</span>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-100 mt-2">
+              <button onclick="openModal(${cafe.id})" class="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1">
+                詳細・客層を見る <i class="fa-solid fa-arrow-right text-[10px]"></i>
+              </button>
+              <!-- target="_blank" guarantees non-destructive navigation -->
+              <a href="${cafe.mapUrl}" target="_blank" rel="noopener noreferrer" class="bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all">
+                <i class="fa-solid fa-map-location-dot"></i> Map
+              </a>
+            </div>
+          </div>
+        `;
+        cafeList.appendChild(card);
+      });
+    }
+
+    function openModal(cafeId) {
+      const cafe = cafes.find(c => c.id === cafeId);
+      if (!cafe) return;
+
+      const mContent = document.getElementById('modal-content');
+      mContent.innerHTML = `
+        <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center hover:bg-slate-200">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div class="mb-4">
+          <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">店舗詳細</span>
+          <h3 class="text-lg font-bold text-slate-800 mt-2">${cafe.name}</h3>
+          <p class="text-xs text-slate-500"><i class="fa-solid fa-location-dot me-1"></i>${cafe.area}</p>
         </div>
-        <div class="meta">${c.area}駅 徒歩${c.walk}分 ・ ${c.price}</div>
-        <div class="meta">${icon('users', 13)} ${c.crowdText}</div>
-        <div class="pitch">${icon('check', 16, 2.4)}<span>${c.pitch[state.purpose]}</span></div>
-        <div class="tap-hint">タップで詳細 →</div>
-      </div>
-    </button>`).join('');
-  $('step-form').hidden = true;
-  $('action-bar').hidden = true;
-  $('step-result').hidden = false;
-  window.scrollTo({ top: 0 });
-}
 
-$('btn-search').addEventListener('click', showResults);
-$('btn-back').addEventListener('click', () => {
-  $('step-result').hidden = true;
-  $('step-form').hidden = false;
-  $('action-bar').hidden = false;
-  window.scrollTo({ top: 0 });
-});
-$('cards').addEventListener('click', (e) => {
-  const card = e.target.closest('.card');
-  if (card) openModal(Number(card.dataset.id), card);
-});
+        <div class="space-y-3 border-t border-b border-slate-100 py-3 mb-4 text-xs">
+          <div>
+            <span class="text-slate-400 block mb-0.5">特徴・設備</span>
+            <div class="flex flex-wrap gap-1">
+              ${cafe.tags.map(t => `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded">${t}</span>`).join('')}
+            </div>
+          </div>
+          <div>
+            <span class="text-slate-400 block mb-0.5">席の構成</span>
+            <p class="font-medium text-slate-700">${cafe.seatsDetail}（合計 ${cafe.totalSeats}席）</p>
+          </div>
+          <div>
+            <span class="text-slate-400 block mb-0.5">店内の構造・客層の目安</span>
+            <p class="font-medium text-slate-700">${cafe.crowdText}</p>
+          </div>
+        </div>
 
-/* ---------- STEP 3: 詳細モーダル ---------- */
-let lastFocus = null;
-function openModal(id, trigger) {
-  const c = current.find(x => x.id === id);
-  lastFocus = trigger;
-  const max = Math.max(...c.crowd);
-  const outletOk = c.outlet !== 'なし';
-  const mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(`${c.name} ${c.area}`);
-  $('sheet').innerHTML = `
-    <div class="grabber"></div>
-    <div class="sheet-head">
-      <div>
-        <h2 class="sheet-title" id="modal-title">${c.name}</h2>
-        <div class="meta">${c.area}駅 徒歩${c.walk}分 ・ ${c.price} ・ <span style="color:var(--amber);font-weight:700">★ ${c.rating.toFixed(1)}</span></div>
-      </div>
-      <button type="button" class="btn-close" id="btn-close" aria-label="閉じる">${icon('close', 18, 2.2)}</button>
-    </div>
+        <a href="${cafe.mapUrl}" target="_blank" rel="noopener noreferrer" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm">
+          <i class="fa-solid fa-map-location-dot"></i> Googleマップを開く
+        </a>
+      `;
+      modal.classList.remove('hidden');
+    }
 
-    <div class="facts">
-      <div class="fact wide">
-        <span class="fact-label">${icon('users', 14)}客層・席</span>
-        <span class="fact-value">${c.crowdText}</span>
-      </div>
-      <div class="fact">
-        <span class="fact-label">${icon('plug', 14)}コンセント</span>
-        <span class="fact-value ${outletOk ? 'ok' : 'ng'}">${outletOk ? 'あり（' + c.outlet + '）' : 'なし'}</span>
-        <span class="fact-sub">${c.outlet === '全席' ? '全席に電源あり' : c.outlet === '一部' ? '窓際・カウンターのみ' : '充電は事前に'}</span>
-      </div>
-      <div class="fact">
-        <span class="fact-label">${icon('wifi', 14)}Wi-Fi</span>
-        <span class="fact-value ${c.wifi ? 'ok' : 'ng'}">${c.wifi ? 'あり' : 'なし'}</span>
-        <span class="fact-sub">${c.wifi ? c.wifiNote : 'テザリング推奨'}</span>
-      </div>
-    </div>
+    function closeModal() {
+      modal.classList.add('hidden');
+    }
 
-    <div class="section-label">${'混雑しやすい時間帯'}<span>ピーク：${c.peak}</span></div>
-    <div class="crowd" role="img" aria-label="混雑の目安。ピークは${c.peak}">
-      ${c.crowd.map(v => `<i class="${v === max ? 'peak' : ''}" style="height:${Math.max(v, 4)}%"></i>`).join('')}
-    </div>
-    <div class="crowd-axis">${c.crowd.map((_, i) => `<span>${(i % 2 === 0) ? 8 + i : ''}</span>`).join('')}</div>
-
-    <div class="section-label">こんな人に</div>
-    <span class="fit" style="display:inline-block;margin-bottom:8px">${fitLine(c, state)}</span>
-    <div class="pitch" style="margin-top:0">${icon('check', 16, 2.4)}<span>${c.pitch[state.purpose]}</span></div>
-    <div class="tags" style="margin-top:12px">${c.tags.map(t => `<span class="tag">#${t}</span>`).join('')}</div>
-
-    <a class="btn-map" href="${mapUrl}" target="_blank" rel="noopener">${icon('pin', 18, 2)}Googleマップで開く</a>
-  `;
-  $('modal').hidden = false;
-  document.body.style.overflow = 'hidden';
-  $('btn-close').focus();
-}
-function closeModal() {
-  $('modal').hidden = true;
-  document.body.style.overflow = '';
-  if (lastFocus) lastFocus.focus();
-}
-$('modal').addEventListener('click', (e) => {
-  if (e.target.id === 'modal' || e.target.closest('#btn-close')) closeModal();
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !$('modal').hidden) closeModal();
-});
-
-/* ---------- 起動 ---------- */
-renderQuestions();
-updateForm();
-</script>
+    function resetQuiz() {
+      currentStep = 0;
+      answers = {};
+      rContainer.classList.add('hidden');
+      document.getElementById('step-indicator').classList.remove('hidden');
+      qContainer.classList.remove('hidden');
+      renderQuestion();
+    }
+  </script>
 </body>
 </html>

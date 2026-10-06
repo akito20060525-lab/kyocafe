@@ -29,7 +29,12 @@
         </div>
         <h1 class="font-bold text-lg text-slate-800 tracking-tight">きょうのカフェ診断</h1>
       </div>
-      <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">プロトタイプ</span>
+      <div class="flex items-center gap-2">
+        <button id="btn-open-post" onclick="openPost()" class="text-xs font-bold bg-amber-700 hover:bg-amber-800 text-white px-3 py-1.5 rounded-full flex items-center gap-1">
+          <i class="fa-solid fa-pen text-[10px]"></i>情報を投稿
+        </button>
+        <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full">プロトタイプ</span>
+      </div>
     </div>
   </header>
 
@@ -90,6 +95,42 @@
 
       <div class="mt-6 text-center text-xs text-slate-400">
         <p>※ 実験用プロトタイプのため架空の店舗データを表示しています</p>
+      </div>
+    </div>
+
+    <!-- Post View (Hidden initially) -->
+    <div id="post-container" class="hidden fade-in">
+      <button onclick="closePost()" class="mb-3 text-xs font-medium text-slate-500 hover:text-amber-800 flex items-center gap-1">
+        <i class="fa-solid fa-chevron-left text-[10px]"></i>戻る
+      </button>
+
+      <div id="post-form-wrap" class="bg-white rounded-2xl p-5 shadow-sm border border-amber-100/60">
+        <h2 class="text-lg font-bold text-slate-800">カフェ情報を投稿</h2>
+        <p class="text-xs text-slate-500 mt-1 mb-5">実際に行ったお店の「作業しやすさ」を教えてください。わかる項目だけで大丈夫です。</p>
+        <form id="post-form" class="grid gap-5" novalidate></form>
+      </div>
+
+      <!-- Done -->
+      <div id="post-done" class="hidden bg-white rounded-2xl p-6 shadow-sm border border-amber-100/60 text-center">
+        <div class="w-12 h-12 mx-auto rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xl mb-3">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <h2 class="text-lg font-bold text-slate-800">投稿ありがとうございます</h2>
+        <p id="post-done-text" class="text-xs text-slate-500 mt-1">内容を確認してからアプリに反映します。</p>
+
+        <!-- 送信先が未設定のときだけ表示 -->
+        <div id="post-copy-box" class="hidden text-left mt-5">
+          <p class="text-xs text-slate-600 mb-2">送信先は準備中です。下の内容をコピーして、運営（LINEなど）に送ってください。</p>
+          <textarea id="post-copy-text" readonly class="w-full h-48 text-xs bg-slate-50 border border-slate-200 rounded-lg p-3 font-mono"></textarea>
+          <button id="btn-copy" onclick="copyPost()" class="mt-2 w-full bg-amber-700 hover:bg-amber-800 text-white text-sm font-bold py-2.5 rounded-xl flex items-center justify-center gap-2">
+            <i class="fa-solid fa-copy"></i><span>内容をコピー</span>
+          </button>
+        </div>
+
+        <div class="grid gap-2 mt-5">
+          <button onclick="resetPostForm()" class="w-full border border-amber-200 text-amber-800 text-sm font-bold py-2.5 rounded-xl">別のお店を投稿する</button>
+          <button onclick="closePost()" class="w-full text-slate-500 text-xs py-2">戻る</button>
+        </div>
       </div>
     </div>
 
@@ -484,6 +525,9 @@
         <a href="${cafe.mapUrl}" target="_blank" rel="noopener noreferrer" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm">
           <i class="fa-solid fa-map-location-dot"></i> Googleマップを開く
         </a>
+        <button onclick="closeModal(); openPost(${JSON.stringify(cafe.name).replace(/"/g, '&quot;')})" class="w-full mt-2 text-amber-800 border border-amber-200 font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 text-xs">
+          <i class="fa-solid fa-pen"></i> 情報が違う・追加したい
+        </button>
       `;
       modal.classList.remove('hidden');
     }
@@ -501,6 +545,192 @@
       document.getElementById('step-indicator').classList.remove('hidden');
       qContainer.classList.remove('hidden');
       renderQuestion();
+    }
+
+    // --- 投稿フォーム ---
+    // 送信先（Googleフォーム）。未設定のあいだは、投稿内容をコピーして送ってもらう
+    const SUBMIT_CONFIG = {
+      formAction: '', // 例: https://docs.google.com/forms/d/e/XXXX/formResponse
+      entries: {}     // 例: { shop: 'entry.123456', station: 'entry.234567', ... }
+    };
+
+    const POST_FIELDS = [
+      { id: 'shop', label: '店名', type: 'text', required: true, placeholder: '例：ドトール 大岡山店' },
+      { id: 'station', label: '最寄り駅', options: ['大岡山', '緑が丘', '北千束', '洗足', '自由が丘', 'その他'], required: true },
+      { id: 'visit', label: '行った時間帯', options: ['平日 午前', '平日 昼', '平日 夕方以降', '土日祝'], required: true },
+      { id: 'outlet', label: 'コンセント', options: ['全席', '一部', 'なし', 'わからない'] },
+      { id: 'outletWhere', label: 'コンセントの場所', type: 'text', placeholder: '例：窓際のカウンターのみ' },
+      { id: 'wifi', label: 'Wi-Fi', options: ['あり', '不安定', 'なし', 'わからない'] },
+      { id: 'pc', label: 'PC作業', options: ['OK', '混雑時NG', 'NG', 'わからない'] },
+      { id: 'quiet', label: '静かさ', options: ['静か', '普通', '賑やか'] },
+      { id: 'stay', label: '長居しやすさ', options: ['2時間以上OK', '1〜2時間', '1時間まで', '回転重視'] },
+      { id: 'crowd', label: '混み具合', options: ['空いてた', 'ほどほど', '満席に近い'] },
+      { id: 'comment', label: 'ひとこと', type: 'textarea', placeholder: '例：昼は学生で満席。15時以降が狙い目' },
+      { id: 'nickname', label: 'ニックネーム（任意）', type: 'text', placeholder: '公開時に表示します' }
+    ];
+
+    let postReturnTo = null;
+    const postForm = document.getElementById('post-form');
+
+    function renderPostForm(prefillShop = '') {
+      const chip = "post-chip px-3 py-1.5 rounded-full border border-amber-200 text-xs font-medium text-slate-700 bg-amber-50/40";
+      postForm.innerHTML = POST_FIELDS.map(f => {
+        const req = f.required ? '<span class="text-amber-700 ms-1">必須</span>' : '';
+        let input;
+        if (f.options) {
+          input = `<div class="flex flex-wrap gap-2" data-group="${f.id}">
+            ${f.options.map(o => `<button type="button" class="${chip}" data-field="${f.id}" data-value="${o}">${o}</button>`).join('')}
+          </div>`;
+        } else if (f.type === 'textarea') {
+          input = `<textarea id="post-${f.id}" rows="3" placeholder="${f.placeholder || ''}" class="w-full text-sm border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"></textarea>`;
+        } else {
+          input = `<input id="post-${f.id}" type="text" placeholder="${f.placeholder || ''}" class="w-full text-sm border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400">`;
+        }
+        return `<div>
+          <label class="block text-xs font-bold text-slate-700 mb-2">${f.label}${req}</label>
+          ${input}
+          <p class="post-error hidden text-[11px] text-red-600 mt-1" data-error="${f.id}">選んでください</p>
+        </div>`;
+      }).join('') + `
+        <label class="flex items-start gap-2 text-xs text-slate-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <input id="post-visited" type="checkbox" class="mt-0.5 accent-amber-700">
+          <span>実際にこのお店に行って確かめました<span class="text-amber-700 ms-1">必須</span></span>
+        </label>
+        <p class="post-error hidden text-[11px] text-red-600 -mt-3" data-error="visited">チェックしてください</p>
+        <button type="submit" id="btn-post-submit" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 rounded-xl text-sm">投稿する</button>
+      `;
+      document.getElementById('post-shop').value = prefillShop;
+
+      postForm.querySelectorAll('.post-chip').forEach(btn => {
+        btn.onclick = () => {
+          const group = postForm.querySelectorAll(`[data-field="${btn.dataset.field}"]`);
+          const wasOn = btn.dataset.on === '1';
+          group.forEach(b => { b.dataset.on = ''; b.classList.remove('bg-amber-700', 'text-white', 'border-amber-700'); });
+          // もう一度押すと選択を外せる
+          if (!wasOn) { btn.dataset.on = '1'; btn.classList.add('bg-amber-700', 'text-white', 'border-amber-700'); }
+        };
+      });
+    }
+
+    function readPostForm() {
+      const data = {};
+      POST_FIELDS.forEach(f => {
+        if (f.options) {
+          const on = postForm.querySelector(`[data-field="${f.id}"][data-on="1"]`);
+          data[f.id] = on ? on.dataset.value : '';
+        } else {
+          data[f.id] = document.getElementById(`post-${f.id}`).value.trim();
+        }
+      });
+      data.visited = document.getElementById('post-visited').checked;
+      return data;
+    }
+
+    function validatePost(data) {
+      let ok = true;
+      postForm.querySelectorAll('.post-error').forEach(e => e.classList.add('hidden'));
+      POST_FIELDS.filter(f => f.required).forEach(f => {
+        if (!data[f.id]) {
+          const err = postForm.querySelector(`[data-error="${f.id}"]`);
+          err.textContent = f.options ? '選んでください' : '入力してください';
+          err.classList.remove('hidden');
+          ok = false;
+        }
+      });
+      if (!data.visited) {
+        postForm.querySelector('[data-error="visited"]').classList.remove('hidden');
+        ok = false;
+      }
+      return ok;
+    }
+
+    function postToText(data) {
+      const lines = POST_FIELDS.filter(f => data[f.id]).map(f => `${f.label.replace('（任意）', '')}: ${data[f.id]}`);
+      lines.push(`投稿日: ${new Date().toLocaleDateString('ja-JP')}`);
+      return '【カフェ情報の投稿】\n' + lines.join('\n');
+    }
+
+    postForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = readPostForm();
+      if (!validatePost(data)) {
+        const firstErr = postForm.querySelector('.post-error:not(.hidden)');
+        if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      const submitBtn = document.getElementById('btn-post-submit');
+      const copyBox = document.getElementById('post-copy-box');
+      const doneText = document.getElementById('post-done-text');
+
+      if (SUBMIT_CONFIG.formAction) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '送信中…';
+        const body = new URLSearchParams();
+        Object.entries(SUBMIT_CONFIG.entries).forEach(([key, entryId]) => {
+          if (data[key]) body.append(entryId, data[key]);
+        });
+        try {
+          // Googleフォームは別ドメインなので、結果は読めない（no-cors）。届いたかは送信先で確認する
+          await fetch(SUBMIT_CONFIG.formAction, { method: 'POST', mode: 'no-cors', body });
+          copyBox.classList.add('hidden');
+          doneText.textContent = '内容を確認してからアプリに反映します。';
+        } catch (err) {
+          // 通信に失敗したときはコピーで送ってもらう
+          copyBox.classList.remove('hidden');
+          doneText.textContent = '通信に失敗しました。下の内容をコピーして送ってください。';
+        }
+      } else {
+        copyBox.classList.remove('hidden');
+        doneText.textContent = '内容を確認してからアプリに反映します。';
+      }
+      document.getElementById('post-copy-text').value = postToText(data);
+      document.getElementById('post-form-wrap').classList.add('hidden');
+      document.getElementById('post-done').classList.remove('hidden');
+      window.scrollTo({ top: 0 });
+    });
+
+    async function copyPost() {
+      const ta = document.getElementById('post-copy-text');
+      const label = document.querySelector('#btn-copy span');
+      try {
+        await navigator.clipboard.writeText(ta.value);
+        label.textContent = 'コピーしました';
+      } catch (e) {
+        // クリップボードが使えない環境では選択状態にして手動コピーしてもらう
+        ta.focus();
+        ta.select();
+        label.textContent = '選択しました。長押しでコピーしてください';
+      }
+    }
+
+    function resetPostForm(prefillShop = '') {
+      renderPostForm(prefillShop);
+      document.getElementById('post-form-wrap').classList.remove('hidden');
+      document.getElementById('post-done').classList.add('hidden');
+      document.querySelector('#btn-copy span').textContent = '内容をコピー';
+      window.scrollTo({ top: 0 });
+    }
+
+    function openPost(prefillShop = '') {
+      // 戻ったときに元の画面を出せるよう、今見えている画面を覚えておく
+      postReturnTo = rContainer.classList.contains('hidden') ? 'question' : 'result';
+      ['step-indicator', 'question-container', 'result-container'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      document.getElementById('btn-open-post').classList.add('hidden');
+      document.getElementById('post-container').classList.remove('hidden');
+      resetPostForm(prefillShop);
+    }
+
+    function closePost() {
+      document.getElementById('post-container').classList.add('hidden');
+      document.getElementById('btn-open-post').classList.remove('hidden');
+      if (postReturnTo === 'result') {
+        rContainer.classList.remove('hidden');
+      } else {
+        document.getElementById('step-indicator').classList.remove('hidden');
+        qContainer.classList.remove('hidden');
+      }
+      window.scrollTo({ top: 0 });
     }
   </script>
 </body>
